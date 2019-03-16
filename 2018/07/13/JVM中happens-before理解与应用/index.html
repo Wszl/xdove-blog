@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="happen-before,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="happens-before 对于 Java 开发者来说可能并不陌生, 尤其是面对并发编程的时候, 更是个无法避免的话题. 为了学习 Java 并发编程, 找了各个方面的资料, 在总结理解各个方面的资料后, 写出自己的理解与想法. 什么是 happens-before ?Wikipedia In computer science, the happened-before relation is a">
+<meta name="keywords" content="happen-before">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM中happens-before理解与应用.md">
+<meta property="og:url" content="http://blog.xdove.org/2018/07/13/JVM中happens-before理解与应用/index.html">
+<meta property="og:site_name" content="XDOVE">
+<meta property="og:description" content="happens-before 对于 Java 开发者来说可能并不陌生, 尤其是面对并发编程的时候, 更是个无法避免的话题. 为了学习 Java 并发编程, 找了各个方面的资料, 在总结理解各个方面的资料后, 写出自己的理解与想法. 什么是 happens-before ?Wikipedia In computer science, the happened-before relation is a">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-15T15:39:24.205Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JVM中happens-before理解与应用.md">
+<meta name="twitter:description" content="happens-before 对于 Java 开发者来说可能并不陌生, 尤其是面对并发编程的时候, 更是个无法避免的话题. 为了学习 Java 并发编程, 找了各个方面的资料, 在总结理解各个方面的资料后, 写出自己的理解与想法. 什么是 happens-before ?Wikipedia In computer science, the happened-before relation is a">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://blog.xdove.org/2018/07/13/JVM中happens-before理解与应用/">
+
+
+
+
+
+  <title>JVM中happens-before理解与应用.md | XDOVE</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">XDOVE</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Wszl's blog.</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://blog.xdove.org/2018/07/13/JVM中happens-before理解与应用/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Wszl">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="XDOVE">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">JVM中happens-before理解与应用.md</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-07-13T23:35:00+08:00">
+                2018-07-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/JVM/" itemprop="url" rel="index">
+                    <span itemprop="name">JVM</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/07/13/JVM中happens-before理解与应用/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/2018/07/13/JVM中happens-before理解与应用/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>happens-before 对于 Java 开发者来说可能并不陌生, 尤其是面对并发编程的时候, 更是个无法避免的话题. 为了学习 Java 并发编程, 找了各个方面的资料, 在总结理解各个方面的资料后, 写出自己的理解与想法.</p>
+<h1 id="什么是-happens-before"><a href="#什么是-happens-before" class="headerlink" title="什么是 happens-before ?"></a>什么是 happens-before ?</h1><h2 id="Wikipedia"><a href="#Wikipedia" class="headerlink" title="Wikipedia"></a>Wikipedia</h2><blockquote>
+<p>In computer science, the happened-before relation is a relation between the result of two events, such that if one event should happen before another event, the result must reflect that, even if those events are in reality executed out of order (usually to optimize program flow). This involves ordering events based on the potential causal relationship of pairs of events in a concurrent system, especially asynchronous distributed systems. It was formulated by Leslie Lamport.[1] In Java specifically, a happens-before relationship is a guarantee that memory written to by statement A is visible to statement B, that is, that statement A completes its write before statement B starts its read.<a href="https://en.wikipedia.org/wiki/Happened-before" target="_blank" rel="noopener">Happened-before</a></p>
+</blockquote>
+<h2 id="java-util-concurrent-包说明"><a href="#java-util-concurrent-包说明" class="headerlink" title="java.util.concurrent 包说明"></a>java.util.concurrent 包说明</h2><blockquote>
+<p>Chapter 17 of The Java™ Language Specification defines the happens-before relation on memory operations such as reads and writes of shared variables. The results of a write by one thread are guaranteed to be visible to a read by another thread only if the write operation happens-before the read operation. The synchronized and volatile constructs, as well as the Thread.start() and Thread.join() methods, can form happens-before relationships.<a href="https://docs.oracle.com/javase/7/docs/api/" target="_blank" rel="noopener">Memory Consistency Properties</a></p>
+</blockquote>
+<h2 id="lt-深入理解-Java-虚拟机-gt"><a href="#lt-深入理解-Java-虚拟机-gt" class="headerlink" title="&lt;深入理解 Java 虚拟机&gt;"></a>&lt;深入理解 Java 虚拟机&gt;</h2><blockquote>
+<p>先行发生是 Java 内存模型中定义的两项操作之间的偏序关系, 如果说操作 A 先行发生于操作 B, 其实就是说发生操作 B 之前, 操作 A 产生的影响能被操作 B 观察到, “影响” 包括修改了内存中共享变量的值, 发送了消息, 调用了方法等.[&lt;深入理解 Java 虚拟机&gt;]</p>
+</blockquote>
+<h2 id="理解与总结"><a href="#理解与总结" class="headerlink" title="理解与总结"></a>理解与总结</h2><p>通过上述三个定义可以肯定, happens-before 是定义在两个操作之间的一种关系, 用来断言操作的结果或者影响能不能被另一个操作观察到. 最直观是在并发编程中, 线程 t1 的操作 a 是否能被线程 t2 的操作 b 观察到, 即 b 操作能不能正确的接受到 a 的操作结果.(“观察到” 这个操作是指, 当 t1 线程中的 a 操作写入了一个数据, 在 t2 线程中能否保证正确的被 t2  线程的 b 操作读取到.)</p>
+<p>不过在我的学习过程中, 理解这句话并不是一帆风顺的, 具体问题出现在: 既然 t1 的操作能被 t2 观察到, 那么为什么增加了 happens-before 的操作中, 依旧会出现结果不正确的情况呢(参考code 2)? </p>
+<h3 id="example"><a href="#example" class="headerlink" title="example"></a>example</h3><ul>
+<li>env: Windows 10, JDK 1.8, IDEA </li>
+</ul>
+<h4 id="volatile-可见性"><a href="#volatile-可见性" class="headerlink" title="volatile 可见性"></a>volatile 可见性</h4><p>code 1:</p>
+<pre><code>public class Main {
+
+    static int i;
+
+    public static void main(String[] args) {
+        Thread th1 = new Thread(() -&gt; i = 1);
+        Thread th2 = new Thread(() -&gt; {
+            int j = i;
+        });
+
+        th1.start();
+        th2.start();
+    }
+}
+</code></pre><p> 上述 Java 代码在执行的时候, 会有两种代码轨迹:</p>
+<ul>
+<li>1 th1:(i = 1)       -&gt; th2: (int j = i) 最终: i = 1, j = 1 或 i = 1, j = 0</li>
+<li>2 th2:(int j = i)   -&gt; th1:(i = 1)      最终: i = 1, j = 0</li>
+</ul>
+<p>在第一种情况下 j 也有可能为 0 是由于 Java 内存模型对普通变量的读写并不保证可见性, 所以即使 th1 在修改了 i 的情况下, 工作内存还未写回主内存, th2 操作就已经完成, 所以即使 th1 先执行, 但依旧不能保证操作结果对外可见, 也就是说其他线程可能观察不到 th1 的修改, 导致了错误的数据. </p>
+<p>要保证 Java 第一种情况不出现 j = 0 的情况, 则需要使用 happens-before 来保证 th1 的操作结果对 th2 可见, 此时我们可以采取以下的方式:</p>
+<ul>
+<li>对 i 增加 volatile 修饰</li>
+<li>对 th1 th2 增加 synchronized 修饰<br>为了简单, 这里使用第一种方法:</li>
+</ul>
+<p>code 2:</p>
+<pre><code>public class Main {
+
+        static volatile int i;
+
+        public static void main(String[] args) {
+                Thread th1 = new Thread(() -&gt; i = 1);
+                Thread th2 = new Thread(() -&gt; {
+                                int j = i;
+                                });
+
+                th1.start();
+                th2.start();
+        }
+}
+</code></pre><p>volatile 保证了操作的可见性, 则第一种执行轨迹, 结果中 j 不再可能为 0 因为在这种执行轨迹下,i 的任何写入操作对 j 都是可见的.但是第二种执行轨迹, j 依旧会是 0 .</p>
+<!-- * 此时若再增加th3, 代码如下
+* code:
+    public class Main {
+
+        static int i;
+
+        public static void main(String[] args) {
+                Thread th1 = new Thread(() -> i = 1);
+                Thread th2 = new Thread(() -> {
+                                int j = i;
+                                });
+                Thread th3 = new Thread(() -> i = 2);
+
+                th1.start();
+                th2.start();
+                th3.start();
+
+        }
+    }
+* 则将有以下几种执行轨迹:
+- th1:(i = 1)   ->  th2:(int j = i) ->  th3:(i = 2) 最终: i = 2, j - 1 或者 i = 2, j = 0 或者 i = 0
+- th2:(i = 1)   ->  th3:(i = 2) ->  th2:(int j = i) 最终: i
+    -->
+<h1 id="happens-before"><a href="#happens-before" class="headerlink" title="happens-before"></a>happens-before</h1><p>以下是来自 &lt;深入理解 Java 虚拟机&gt; 中对 happens-before 的介绍:</p>
+<ul>
+<li>程序次序规则: 在一个线程内, 按照程序代码顺序, 书写在前面的操作先行发生于书写在后面的操作. 准确的说, 应该是控制流顺序而不是程序代码顺序, 因为要考虑分支、循环等结构.</li>
+<li>管程锁定规则: 一个 unlock 操作先行发生于后面对同一个锁的 lock 操作. 这里必须强调的是同一个锁, 而”后面”是指时间上的先后顺序.</li>
+<li>volatile 变量规则: 对一个 volatile 变量的写操作先行发生于后面对这个变量的读操作, 这里的”后面”同样是指时间上的先后顺序.</li>
+<li>线程启动规则: Thread 对象的 start() 方法先行发生于此线程的每一个动作.</li>
+<li>线程终止规则: 线程中的所有操作都先行发生于对线程的终止检测, 我们可以通过 Thread.join() 方法结束, Thread.isAlive() 的返回值等手段检测到线程已经终止执行.</li>
+<li>线程中断规则: 对线程 interrupt() 方法的调用先行发生于被中断线程的代码检测到中断事件的发生, 可以通过 Thread.interrupted() 方法检测到是否有中断发生.</li>
+<li>对象终结规则: 一个对象的初始化完成(构造函数执行结束)先行发生于它的 finalize() 方法的开始.</li>
+<li>传递性: 如果操作 A 先行发生于操作 B, 操作 B 先行发生于操作 C, 那就可以得出操作 A 先行发生于操作 C 的结论.<br>以上是书中介绍的 Java 不需要通过同步手段就能保证的 happens-before 规则.<h1 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h1>Java Memory Model 围绕着并发操作中的原子性、可见性、有序性特征来建立, 基于 JMM 的 JVM 以及其上的 Java 语言上的并发编程, 则通过 happens-before 可以保证代码正确处理了并发中的这三个特征. 可以说, happens-before 是并发编程的利器.</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>过着四分幻想六分生活 O(∩_∩)O</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="Wszl 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="Wszl 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+	
+	
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Wszl
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://blog.xdove.org/2018/07/13/JVM中happens-before理解与应用/" title="JVM中happens-before理解与应用.md">http://blog.xdove.org/2018/07/13/JVM中happens-before理解与应用/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/happen-before/" rel="tag"># happen-before</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Wszl</p>
+              <p class="site-description motion-element" itemprop="description">wszl</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#什么是-happens-before"><span class="nav-number">1.</span> <span class="nav-text">什么是 happens-before ?</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Wikipedia"><span class="nav-number">1.1.</span> <span class="nav-text">Wikipedia</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#java-util-concurrent-包说明"><span class="nav-number">1.2.</span> <span class="nav-text">java.util.concurrent 包说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lt-深入理解-Java-虚拟机-gt"><span class="nav-number">1.3.</span> <span class="nav-text">&lt;深入理解 Java 虚拟机&gt;</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#理解与总结"><span class="nav-number">1.4.</span> <span class="nav-text">理解与总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#example"><span class="nav-number">1.4.1.</span> <span class="nav-text">example</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#volatile-可见性"><span class="nav-number">1.4.1.1.</span> <span class="nav-text">volatile 可见性</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#happens-before"><span class="nav-number">2.</span> <span class="nav-text">happens-before</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#应用"><span class="nav-number">3.</span> <span class="nav-text">应用</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XDove's Wszl</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'Wszl',
+            repo: 'xdove-blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: 'd12be33d58268c079521335231d9f8f733d597ff',
+            
+                client_id: '55f74b9c8f2678ea4793'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
